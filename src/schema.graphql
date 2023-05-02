@@ -1,0 +1,19 @@
+type Movie {
+    _id: ID!
+    title: String!
+    rating: Float!
+    year: Int!
+}
+
+type Query {
+    currentNumber: Int
+    getMovies: [Movie!]!,
+    getMovie(id: ID!): Movie
+}
+type Mutation {
+    incrementNumber: Int!
+    createMovie(title: String!, rating: Float!, year: Int!): Movie!
+}
+type Subscription {
+    numberIncremented: Int
+}
