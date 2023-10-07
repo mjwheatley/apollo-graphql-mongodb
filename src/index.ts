@@ -16,8 +16,10 @@ import mongoose from 'mongoose';
 import resolvers from './resolvers';
 import { Movie as MovieModel } from './models/movie';
 import MoviesDataSource from './dataSources/movies';
+import { MongodbPubSub } from 'graphql-mongodb-subscriptions';
 
 export interface ContextValue {
+  pubsub: MongodbPubSub;
   dataSources: {
     movies: MoviesDataSource;
   };
@@ -40,6 +42,10 @@ const dataSources = {
   // @ts-ignore
   movies: new MoviesDataSource(MovieModel)
 };
+
+const mongodbpubsub = new MongodbPubSub({
+  connectionDb: mongoose.connections[0].db
+});
 
 // const getDynamicContext = async (ctx, msg, args) => {
 //   // ctx is the graphql-ws Context where connectionParams live
@@ -72,7 +78,10 @@ const wsServer = new WebSocketServer({
   path: '/graphql'
 });
 const serverCleanup = useServer({
-  schema
+  schema,
+  context: (_ctx, _message, _args): ContextValue => {
+    return { pubsub: mongodbpubsub, dataSources };
+  }
 }, wsServer);
 
 // Set up ApolloServer.
@@ -103,12 +112,13 @@ app.use(
   expressMiddleware(server, {
     // Adding a context property lets you add data to your GraphQL operation contextValue
     // @ts-ignore
-    context: async (_ctx: ExpressContextFunctionArgument, _msg: any, _args: any) => {
+    context: async (_ctx: ExpressContextFunctionArgument, _msg: any, _args: any): Promise<ContextValue> => {
       // You can define your own function for setting a dynamic context
       // or provide a static value
       // return getDynamicContext(ctx, msg, args);
       return {
-        dataSources
+        dataSources,
+        pubsub: mongodbpubsub
       };
     }
   }));
